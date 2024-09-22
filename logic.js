@@ -100,7 +100,7 @@ async function getWebhook(channel) {
 async function createWebhook(channel) {
   const settings = getChannelSettings(channel.id) ?? {};
   /** @type {Webhook}  */
-  const wh = await interaction.channel.createWebhook({
+  const wh = await channel.createWebhook({
     name: config.DISCORD_WEBHOOK_NAME,
     avatar: config.DISCORD_WEBHOOK_AVATAR,
   });
