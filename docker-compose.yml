@@ -5,8 +5,8 @@ services:
     container_name: messagesticky
     image: kayleesachs/messagesticky:latest
     volumes:
-       - /root/messagesticky/env:/messagesticky/.env.local
-       - /root/messagesticky/db:/messagesticky/db
+       - /root/messagesticky/env:/sticky/.env.local
+       - /root/messagesticky/db:/sticky/db
     logging:
       driver: journald
       options:
