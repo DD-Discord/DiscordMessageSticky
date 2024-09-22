@@ -11,6 +11,7 @@ const mutex = new Set();
  * Checks if a sticky needs to be repost in the given channel and does so if necessary.
  * @param {Channel} channel The channel to check for sticky reposts.
  * @param {Message?} message The message that triggered this check.
+ * @returns {Promise<Message | void>} The reposted message if a sticky was reposted. Undefined otherwise.
  */
 async function maybeRepost(channel, message) {
   // Get settings for channel
@@ -64,15 +65,16 @@ async function maybeRepost(channel, message) {
     const res = await webhook.send({ content: settings.content, embeds: settings.embeds });
     settings.lastMessageId = res.id;
     writeChannelSettings(channelId, settings);
+    return res;
   } finally{
     mutex.delete(channelId);
   }
 }
 
 /**
- * 
+ * Gets the webhook for the given channel.
  * @param {Channel} channel The channel of which to get the webhook.
- * @returns {Promise<Webhook | null>} The webbhook for the given channel.
+ * @returns {Promise<Webhook | null>} The webbhook for the given channel. Null if no webhook is found.
  */
 async function getWebhook(channel) {
   const settings = getChannelSettings(channel.id);
@@ -86,20 +88,30 @@ async function getWebhook(channel) {
   return webhook;
 }
 
+/**
+ * Creates a webhook and saves it in the database.
+ * @param {Channel} channel The channel for which to create the webhook.
+ * @returns {Promise<Webhook>} The created webbhook for the given channel.
+ */
 async function createWebhook(channel) {
   const settings = getChannelSettings(channel.id) ?? {};
   /** @type {Webhook}  */
   const wh = await interaction.channel.createWebhook({
     name: config.DISCORD_WEBHOOK_NAME,
     avatar: config.DISCORD_WEBHOOK_AVATAR,
-  })
-  await wh.send({ content: 'Webhook created for channel ID ' + channel.id });
+  });
+  await wh.send({ content: `Webhook <@${wh.id}> created for channel <#${channel.id}>`});
   settings.webhookId = wh.id;
   settings.channelId = channel.id;
   writeChannelSettings(channel.id, settings);
   return wh;
 }
 
+/**
+ * Gets the webhook for the given channel. If none is found: Creates a webhook and saves it in the database.
+ * @param {Channel} channel The channel for which to create/get the webhook.
+ * @returns {Promise<Webhook>} The webbhook for the given channel.
+ */
 async function getOrCreateWebhook(channel) {
   let webhook = await getWebhook(channel);
   if (!webhook) {

@@ -48,7 +48,7 @@ module.exports.execute = async function(interaction) {
   // Check if a sticky already exists
   if (settings.templateId && !override) {
     return interaction.reply({
-      content: "A sticky already exists. Use the `override` option to replace it.",
+      content: `A sticky already exists. Use the \`override\` option to replace it.`,
       ephemeral: true,
     });
   }
@@ -60,7 +60,7 @@ module.exports.execute = async function(interaction) {
     message = await interaction.channel.messages.fetch(templateId);
   } catch (error) {
     return interaction.reply({
-      content: "Failed to fetch message with ID " + templateId,
+      content: `Failed to fetch message with ID ${templateId}`,
       ephemeral: true,
     });
   }
@@ -73,7 +73,7 @@ module.exports.execute = async function(interaction) {
   } catch (error) {
     console.error(error);
     return interaction.reply({
-      content: "Failed to create webhook - The bot is probably missing permissions.",
+      content: `Failed to create webhook - The bot is probably missing permissions.`,
       ephemeral: true,
     });
   }
@@ -88,7 +88,7 @@ module.exports.execute = async function(interaction) {
   
   // Done
   return interaction.reply({
-    content: "Created sticky",
+    content: `Created sticky from message ${message.url}.`,
     ephemeral: true,
   });
 };
