@@ -22,17 +22,35 @@ module.exports.execute = async function(interaction) {
     });
   }
 
-  const settings = getChannelSettings(channelId);
-  if (!settings) {
+  try {
+    const settings = getChannelSettings(channelId);
+    if (!settings) {
+      return interaction.reply({
+        content: "No sticky exists in this channel.",
+        ephemeral: true,
+      });
+    }
+
+    const webhook = await getWebhook(interaction.channel);
+    if (!webhook) {
+      return interaction.reply({
+        content: "No webhook found for this channel.",
+        ephemeral: true,
+      });
+    }
+
+    await webhook.delete('Sticky deleted by ' + interaction.user.tag);
+  
+    // Done
     return interaction.reply({
-      content: "No sticky exists in this channel.",
+      content: "Sticky deleted.",
+      ephemeral: true,
+    });
+  } catch (error) {
+    console.error('Failed to delete sticky', error);
+    return interaction.reply({
+      content: "Failed to delete sticky.",
       ephemeral: true,
     });
   }
-
-  const webhook = getWebhook(interaction.channel);
-
-  
-  // Done
-  return interaction.reply("Created sticky");
 };
