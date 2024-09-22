@@ -1,5 +1,5 @@
 const { CommandInteraction, SlashCommandBuilder, Webhook, Message } = require("discord.js");
-const { getChannelSettings, writeChannelSettings } = require("../db");
+const { getChannelSettings, deleteChannelSettings } = require("../db");
 const { hasStickyPermission } = require("../permissions");
 const { getWebhook } = require("../logic");
 
@@ -23,7 +23,7 @@ module.exports.execute = async function(interaction) {
   }
 
   try {
-    const settings = getChannelSettings(channelId);
+    const settings = getChannelSettings(interaction.channel.id);
     if (!settings) {
       return interaction.reply({
         content: "No sticky exists in this channel.",
@@ -31,10 +31,12 @@ module.exports.execute = async function(interaction) {
       });
     }
 
+    deleteChannelSettings(interaction.channel.id);
+
     const webhook = await getWebhook(interaction.channel);
     if (!webhook) {
       return interaction.reply({
-        content: "No webhook found for this channel.",
+        content: "Sticky settings were deleted, but no webhook found for this channel. Please check the Integration settings of this channel manually.",
         ephemeral: true,
       });
     }
