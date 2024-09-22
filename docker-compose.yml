@@ -1,0 +1,14 @@
+version: '3.5'
+
+services:
+  imaptodiscord:
+    container_name: messagesticky
+    image: kayleesachs/messagesticky:latest
+    volumes:
+       - /root/messagesticky/env:/messagesticky/.env.local
+       - /root/messagesticky/db:/messagesticky/db
+    logging:
+      driver: journald
+      options:
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+    restart: unless-stopped
