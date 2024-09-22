@@ -49,15 +49,6 @@ module.exports.execute = async function(interaction) {
   const override = interaction.options.getBoolean("override") ?? false;
   const silent = interaction.options.getBoolean("silent") ?? false;
   const channelId = interaction.channelId;
-  let settings = getChannelSettings(channelId);
-
-  // Check if a sticky already exists
-  if (settings.templateId && !override) {
-    return interaction.reply({
-      content: `A sticky already exists. Use the \`override\` option to replace it.`,
-      ephemeral: true,
-    });
-  }
 
   // Fetch message
   /** @type {Message} */
@@ -80,6 +71,15 @@ module.exports.execute = async function(interaction) {
     console.error(error);
     return interaction.reply({
       content: `Failed to create webhook - The bot is probably missing permissions.`,
+      ephemeral: true,
+    });
+  }
+
+  // Check if a sticky already exists
+  const settings = getChannelSettings(channelId);
+  if (settings.templateId && !override) {
+    return interaction.reply({
+      content: `A sticky already exists. Use the \`override\` option to replace it.`,
       ephemeral: true,
     });
   }
