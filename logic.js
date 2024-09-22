@@ -1,4 +1,4 @@
-const { Channel, Webhook, Message } = require("discord.js");
+const { Channel, Webhook, Message, MessageFlagsBitField } = require("discord.js");
 const { getChannelSettings, writeChannelSettings } = require("./db");
 const config = require("./config");
 
@@ -62,7 +62,11 @@ async function maybeRepost(channel, message) {
       return;
     }
 
-    const res = await webhook.send({ content: settings.content, embeds: settings.embeds });
+    const res = await webhook.send({ 
+      content: settings.content, 
+      embeds: settings.embeds,
+      flags: settings.silent ? [MessageFlagsBitField.Flags.SuppressNotifications] : [],
+    });
     settings.lastMessageId = res.id;
     writeChannelSettings(channelId, settings);
     return res;

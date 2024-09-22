@@ -20,6 +20,11 @@ module.exports.data = new SlashCommandBuilder()
     return option;
   })
   .addBooleanOption(option => {
+    option.setName("silent");
+    option.setDescription("If set, reposting the sticky will not send notifications.");
+    return option;
+  })
+  .addBooleanOption(option => {
     option.setName("override");
     option.setDescription("Override the current sticky.");
     return option;
@@ -42,6 +47,7 @@ module.exports.execute = async function(interaction) {
   const templateId = interaction.options.getString("message-id");
   const ignoreBots = interaction.options.getBoolean("ignore-bots") ?? false;
   const override = interaction.options.getBoolean("override") ?? false;
+  const silent = interaction.options.getBoolean("silent") ?? false;
   const channelId = interaction.channelId;
   let settings = getChannelSettings(channelId);
 
@@ -82,6 +88,7 @@ module.exports.execute = async function(interaction) {
   settings.creatorId = interaction.user.id;
   settings.templateId = message.id;
   settings.ignoreBots = ignoreBots;
+  settings.silent = silent;
   settings.content = message.content;
   settings.embeds = message.embeds;
   writeChannelSettings(channelId, settings);
