@@ -56,8 +56,9 @@ module.exports.execute = async function(interaction) {
   try {
     message = await interaction.channel.messages.fetch(templateId);
   } catch (error) {
+    console.error(error);
     return interaction.reply({
-      content: `Failed to fetch message with ID ${templateId}`,
+      content: `Failed to fetch message with ID ${templateId}. The error is: \`\`\`\n${error}\n\`\`\``,
       ephemeral: true,
     });
   }
@@ -70,7 +71,7 @@ module.exports.execute = async function(interaction) {
   } catch (error) {
     console.error(error);
     return interaction.reply({
-      content: `Failed to create webhook - The bot is probably missing permissions.`,
+      content: `Failed to create webhook - The bot is probably missing permissions. The error is: \`\`\`\n${error}\n\`\`\``,
       ephemeral: true,
     });
   }
