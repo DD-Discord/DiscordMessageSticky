@@ -1,6 +1,6 @@
 services:
   discordmessagesticky:
-    image: ghcr.io/dd-discord/discordcomoderator:master
+    image: ghcr.io/dd-discord/discordmessagesticky:master
     volumes:
        - /root/containers/discordmessagesticky/env:/sticky/.env.local
        - /root/containers/discordmessagesticky/data:/sticky/data
