@@ -1,14 +1,7 @@
-version: '3.5'
-
 services:
-  imaptodiscord:
-    container_name: messagesticky
-    image: kayleesachs/messagesticky:latest
+  discordmessagesticky:
+    image: ghcr.io/dd-discord/discordcomoderator:master
     volumes:
-       - /root/messagesticky/env:/sticky/.env.local
-       - /root/messagesticky/db:/sticky/db
-    logging:
-      driver: journald
-      options:
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+       - /root/containers/discordmessagesticky/env:/sticky/.env.local
+       - /root/containers/discordmessagesticky/db:/sticky/db
     restart: unless-stopped
