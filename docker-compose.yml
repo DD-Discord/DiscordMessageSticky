@@ -3,5 +3,5 @@ services:
     image: ghcr.io/dd-discord/discordcomoderator:master
     volumes:
        - /root/containers/discordmessagesticky/env:/sticky/.env.local
-       - /root/containers/discordmessagesticky/db:/sticky/db
+       - /root/containers/discordmessagesticky/data:/sticky/data
     restart: unless-stopped
