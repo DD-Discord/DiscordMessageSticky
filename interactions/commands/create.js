@@ -30,6 +30,11 @@ module.exports.data = new SlashCommandBuilder()
     option.setDescription("If set, reposting the sticky will not send notifications. (Default: Yes)");
     return option;
   })
+  .addIntegerOption(option => {
+    option.setName("debounce");
+    option.setDescription("If set, wait the specified amount of milliseconds before reposting the message. (Default: 0)");
+    return option;
+  })
   .addBooleanOption(option => {
     option.setName("override");
     option.setDescription("Override the current sticky.");
@@ -48,6 +53,7 @@ module.exports.execute = async function (interaction) {
   const override = interaction.options.getBoolean("override");
   const silent = interaction.options.getBoolean("silent");
   const channel = interaction.options.getChannel("channel");
+  const debounce = interaction.options.getInteger("debounce");
   const channelId = channel.id;
 
   // Fetch message
@@ -90,6 +96,10 @@ module.exports.execute = async function (interaction) {
   if (silent !== null) {
     settings.silent = silent;
   }
+  if (debounce !== null) {
+    settings.debounce = debounce;
+  }
+  settings.guildId = message.guildId; // set guild ID since old db records dont have it
   settings.content = message.content;
   settings.embeds = message.embeds.map(e => e.toJSON());
   delete settings.createdAt;

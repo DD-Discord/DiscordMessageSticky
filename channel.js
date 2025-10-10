@@ -1,11 +1,12 @@
-const { dbGet, dbRegister, dbWrite, dbDelete, DbRecord } = require("./db");
-const { APIEmbed, EmbedBuilder } = require("discord.js");
+const { dbGet, dbRegister, dbWrite, dbDelete, DbRecord, dbGetAll } = require("./db");
+const { APIEmbed, EmbedBuilder, Channel } = require("discord.js");
 const { wrapInCode } = require("./fmt");
 
 /**
  * Settings for a single channel in the message sticky.
  * @typedef {Object} ChannelSettings
  * 
+ * @property {string} guildId The ID of the guild.
  * @property {string} channelId The ID of the channel.
  * @property {string} channelName The name of the channel.
  * @property {string} webhookId The ID of the webhook. [DEPRECATED]
@@ -42,6 +43,15 @@ module.exports.getChannelSettings = getChannelSettings;
 
 /**
  * 
+ * @returns {ChannelSettings[]}
+ */
+function getAllChannelSettings() {
+  return dbGetAll("channels");
+}
+module.exports.getAllChannelSettings = getAllChannelSettings;
+
+/**
+ * 
  * @param {ChannelSettings} settings 
  */
 function writeChannelSettings(settings) {
@@ -65,10 +75,13 @@ module.exports.deleteChannelSettings = deleteChannelSettings;
  */
 function getDefaultChannelSettings(channel) {
   return {
+    guildId: channel.guildId,
     channelId: channel.id,
     channelName: channel.name,
     silent: true,
     ignoreBots: true,
+    debounce: 0,
+    isDebouncing: false,
     lastMessageId: null,
     templateId: '',
     webhookId: '',
@@ -86,10 +99,13 @@ function getChannelSettingsEmbed(settings) {
     .setTitle(settings.channelName)
     .setDescription(`> These are the settings for <#${settings.channelId}>:\n${wrapInCode({ content: settings.content, embeds: settings.embeds })}`)
     .addFields([
+      { name: 'Guild ID', value: wrapInCode(settings.guildId), inline: true, },
       { name: 'Channel ID', value: wrapInCode(settings.channelId), inline: true, },
       { name: 'Channel Name', value: wrapInCode(settings.channelName), inline: true, },
       { name: 'Ignore bots?', value: wrapInCode(settings.ignoreBots), inline: true, },
       { name: 'Silent?', value: wrapInCode(settings.silent), inline: true, },
+      { name: 'Debounce MS', value: wrapInCode(settings.debounce), inline: true, },
+      { name: 'Is debouncing?', value: wrapInCode(settings.isDebouncing), inline: true, },
       { name: 'Template ID', value: wrapInCode(settings.templateId), inline: true, },
       // Limit length for security
       { name: 'Webhook (ID)', value: wrapInCode(settings.webhookId, { maxLength: 60 }), inline: true, },

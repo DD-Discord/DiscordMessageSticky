@@ -31,7 +31,9 @@ module.exports.maxLength = maxLength;
  */
 function wrapInCode(value, opts = null) {
   let lang = opts?.language;
-  if (typeof value !== 'string') {
+  if (value === undefined) {
+    value = 'undefined';
+  } else if (typeof value !== 'string') {
     value = dbSerialize(value);
     if (!lang) {
       lang = 'json';

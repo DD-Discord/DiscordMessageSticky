@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const interactions = require("./interactions");
 const config = require("./config");
-const { maybeRepost } = require("./logic");
+const { maybeRepost, reviveDebouncers } = require("./logic");
 const { register } = require("./channel");
 
 register();
@@ -20,6 +20,7 @@ client.once(Events.ClientReady, () => {
 
 client.on(Events.GuildAvailable, async (guild) => {
   await interactions.deploy({ guildId: guild.id });
+  await reviveDebouncers(guild);
 });
 
 client.on(Events.MessageCreate, async (message) => {

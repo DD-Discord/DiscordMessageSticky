@@ -29,9 +29,8 @@ module.exports.execute = async function (interaction) {
       });
     }
 
+    const webhook = await getWebhook(channel);
     deleteChannelSettings(channel.id);
-
-    const webhook = await getWebhook(interaction.channel);
     if (!webhook) {
       return interaction.reply({
         content: "# Sticky partially deleted\nSticky settings were deleted, but no webhook found for this channel. Please check the Integration settings of this channel manually.",
@@ -42,7 +41,7 @@ module.exports.execute = async function (interaction) {
 
     // Done
     return interaction.reply({
-      content: "# Sticky fully deleted\nSticky deleted.",
+      content: "# Sticky fully deleted\nSticky deleted in " + channel.url,
     });
   } catch (error) {
     console.error('Failed to delete sticky', error);

@@ -1,29 +1,127 @@
-const { Channel, Webhook, Message, MessageFlagsBitField, WebhookClient } = require("discord.js");
-const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings } = require("./channel");
+const { Channel, Webhook, Message, MessageFlagsBitField, WebhookClient, Client, Guild } = require("discord.js");
+const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings, ChannelSettings, getAllChannelSettings } = require("./channel");
 const config = require("./config");
 
 /**
  * Only allow processing a single channel once at the same time.
  */
 const mutex = new Set();
+const debounceTimers = new Map();
+
+/**
+ * 
+ * @param {Guild} guild 
+ */
+async function reviveDebouncers(guild) {
+  const allSettings = getAllChannelSettings();
+  for (const setting of allSettings) {
+    if (setting.guildId !== guild.id) {
+      continue;
+    }
+    
+    if (!setting.isDebouncing) {
+      continue;
+    }
+
+    try {
+      const channel = await guild.channels.fetch(setting.channelId);
+      if (channel) {
+        startDebounceTimer(channel, setting);
+      }
+    } catch(error) {
+      console.error('Failed to revive timer for %s in %s', setting.channelId, guild.id, error);
+    }
+  }
+}
+module.exports.reviveDebouncers = reviveDebouncers;
+
+/**
+ * @param {Channel} channel
+ * @param {ChannelSettings} settings 
+ */
+function startDebounceTimer(channel, settings) {
+  if (!settings.debounce) {
+    return false;
+  }
+  if (settings.isDebouncing) {
+    const timer = debounceTimers.get(channel.id);
+    clearTimeout(timer);
+  }
+  const timer = setTimeout(() => onDebounceTimer(channel), settings.debounce);
+  console.log('Debouncing %s in %s', channel.id, settings.debounce);
+  debounceTimers.set(channel.id, timer);
+  settings.isDebouncing = true;
+  writeChannelSettings(settings);
+  return timer;
+}
+
+/**
+ * 
+ * @param {Channel} channel 
+ */
+async function onDebounceTimer(channel) {
+  try {
+    const settings = getChannelSettings(channel.id);
+    settings.isDebouncing = false;
+    writeChannelSettings(settings);
+    await performRepost(channel);
+  } catch(error) {
+    console.error('Error debounced reposting in %s', channel.id, error)
+  }
+}
+
+/**
+ * 
+ * @param {Channel} channel 
+ */
+async function performRepost(channel) {
+  const settings = getChannelSettings(channel.id);
+  if (!settings) {
+    return false;
+  }
+
+  // Get webhook for channel
+  const webhook = await getWebhook(channel);
+  if (!webhook) {
+    console.warn('No webhook for channel ' + channel.id);
+    return false;
+  }
+  
+  // Delete old sticky
+  if (settings.lastMessageId) {
+    try {
+      await webhook.deleteMessage(settings.lastMessageId);
+    } catch (error) {
+      console.error('Failed to delete old sticky', error);
+    }
+  }
+
+  // Repost sticky
+  const res = await webhook.send({ 
+    content: settings.content, 
+    embeds: settings.embeds,
+    flags: settings.silent ? [MessageFlagsBitField.Flags.SuppressNotifications] : [],
+  });
+  settings.lastMessageId = res.id;
+  writeChannelSettings(settings);
+}
 
 /**
  * Checks if a sticky needs to be repost in the given channel and does so if necessary.
  * @param {Channel} channel The channel to check for sticky reposts.
  * @param {Message?} message The message that triggered this check.
- * @returns {Promise<Message | void>} The reposted message if a sticky was reposted. Undefined otherwise.
  */
 async function maybeRepost(channel, message) {
   // Get settings for channel
   const channelId = channel.id;
   const settings = getChannelSettings(channel.id);
   if (!settings) {
-    return
+    return false;
   }
 
   try {
     if (mutex.has(channelId)) {
-      return;
+      return false;
     }
     mutex.add(channelId);
 
@@ -31,7 +129,7 @@ async function maybeRepost(channel, message) {
     const webhook = await getWebhook(channel);
     if (!webhook) {
       console.warn('No webhook for channel ' + channelId);
-      return;
+      return false;
     }
 
     // Prevent reposting messages from the webhook itself
@@ -39,41 +137,24 @@ async function maybeRepost(channel, message) {
       const authorId = message.author.id;
       if (authorId === webhook.id) {
         console.debug('Ignoring message from webhook');
-        return;
+        return false;
       }
-      if (settings.ignoreBots && message.author.bot) {
+      if (settings.ignoreBots && (message.author.bot || message.author.system)) {
         console.debug('Ignoring message from bot');
-        return;
+        return false;
       }
     }
 
-    // Delete old sticky
-    if (settings.lastMessageId) {
-      try {
-        await channel.messages.delete(settings.lastMessageId);
-      } catch (error) {
-        console.error('Failed to delete old sticky', error);
-      }
+    if (settings.debounce) {
+      return startDebounceTimer(channel, settings);
+    } else {
+      return await performRepost(channel);
     }
-
-    // Repost sticky
-    if (!settings.templateId) {
-      console.debug('No message ID set');
-      return;
-    }
-
-    const res = await webhook.send({ 
-      content: settings.content, 
-      embeds: settings.embeds,
-      flags: settings.silent ? [MessageFlagsBitField.Flags.SuppressNotifications] : [],
-    });
-    settings.lastMessageId = res.id;
-    writeChannelSettings(settings);
-    return res;
-  } finally{
+  } finally {
     mutex.delete(channelId);
   }
 }
+module.exports.maybeRepost = maybeRepost;
 
 /**
  * Gets the webhook for the given channel.
@@ -94,6 +175,7 @@ async function getWebhook(channel) {
   const webhook = webhooks.get(webhookId);
   return webhook.client;
 }
+module.exports.getWebhook = getWebhook;
 
 /**
  * Creates a webhook and saves it in the database.
@@ -127,6 +209,4 @@ async function getOrCreateWebhook(channel) {
   }
   return webhook;
 }
-
-
-module.exports = { maybeRepost, getWebhook, getOrCreateWebhook };
+module.exports.getOrCreateWebhook = getOrCreateWebhook;
