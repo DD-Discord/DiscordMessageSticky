@@ -1,5 +1,5 @@
 const { Channel, Webhook, Message, MessageFlagsBitField } = require("discord.js");
-const { getChannelSettings, writeChannelSettings } = require("./db");
+const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings } = require("./channel");
 const config = require("./config");
 
 /**
@@ -68,7 +68,7 @@ async function maybeRepost(channel, message) {
       flags: settings.silent ? [MessageFlagsBitField.Flags.SuppressNotifications] : [],
     });
     settings.lastMessageId = res.id;
-    writeChannelSettings(channelId, settings);
+    writeChannelSettings(settings);
     return res;
   } finally{
     mutex.delete(channelId);
@@ -98,7 +98,7 @@ async function getWebhook(channel) {
  * @returns {Promise<Webhook>} The created webbhook for the given channel.
  */
 async function createWebhook(channel) {
-  const settings = getChannelSettings(channel.id) ?? {};
+  const settings = getChannelSettings(channel.id) ?? getDefaultChannelSettings(channel);
   /** @type {Webhook}  */
   const wh = await channel.createWebhook({
     name: config.DISCORD_WEBHOOK_NAME,
@@ -106,8 +106,8 @@ async function createWebhook(channel) {
   });
   await wh.send({ content: `Webhook <@${wh.id}> created for channel <#${channel.id}>`});
   settings.webhookId = wh.id;
-  settings.channelId = channel.id;
-  writeChannelSettings(channel.id, settings);
+  settings.webhookUrl = wh.url;
+  writeChannelSettings(settings);
   return wh;
 }
 
