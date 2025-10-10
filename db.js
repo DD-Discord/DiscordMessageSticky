@@ -7,6 +7,13 @@ const crypto = require("crypto");
  * @typedef {(string | string[])} Table
  */
 
+/**
+ * Base type for all DB records
+ * @typedef {Object} DbRecord
+ * @property {Date?} createdAt When the record was created. Only set during the first save.
+ * @property {Date?} updatedAt When the record was last saved. Set on each save.
+ */
+
 const cache = {};
 
 function tableToStr(table) {
@@ -19,7 +26,7 @@ function tableToStr(table) {
 /**
  * Gets the cache of a table.
  * @param {Table} table The table name
- * @returns {Record<string, any>} The cache
+ * @returns {Record<string, DbRecord>} The cache
  */
 function tableCache(table) {
   table = tableToStr(table);
@@ -56,7 +63,7 @@ module.exports.dbRegister = dbRegister;
 
 /**
  * Serializes an object to the database, using its internal replacer function.
- * @param {object} data The data to serialize.
+ * @param {DbRecord} data The data to serialize.
  * @returns {string} The string for the database.
  */
 function dbSerialize(data) {
@@ -67,7 +74,7 @@ module.exports.dbSerialize = dbSerialize;
 /**
  * Deserializes an object previously serialized via `dbSerialize` by using its internal reviver function.
  * @param {string} data The string to deserialize.
- * @returns {object} The object.
+ * @returns {DbRecord} The object.
  */
 function dbDeserialize(data) {
   return JSON.parse(data, reviver);
@@ -95,7 +102,7 @@ module.exports.dbDelete = dbDelete;
  * Writes an entry to the database.
  * @param {Table} table The table.
  * @param {string} id The record ID.
- * @param {object} data The data to write.
+ * @param {DbRecord} data The data to write.
  */
 function dbWrite(table, id, data) {
   if (typeof id !== 'string') {
@@ -115,7 +122,7 @@ module.exports.dbWrite = dbWrite;
  * Gets an entry from the database.
  * @param {Table} table The table name
  * @param {string} id The record ID.
- * @returns {object | null} The entry
+ * @returns {DbRecord | null} The entry
  */
 function dbGet(table, id) {
   if (typeof id !== 'string') {
@@ -139,7 +146,7 @@ module.exports.dbGet = dbGet;
 /**
  * Gets all entires of a given table from the database.
  * @param {Table} table The table name
- * @returns {object[]} The entries
+ * @returns {DbRecord[]} The entries
  */
 function dbGetAll(table) {
   const files = fs.readdirSync(dbDir(table));

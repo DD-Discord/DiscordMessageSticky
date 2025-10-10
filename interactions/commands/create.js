@@ -92,6 +92,7 @@ module.exports.execute = async function (interaction) {
   }
   settings.content = message.content;
   settings.embeds = message.embeds.map(e => e.toJSON());
+  delete settings.createdAt;
   writeChannelSettings(settings);
 
   // Done
