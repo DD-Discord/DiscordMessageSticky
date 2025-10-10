@@ -19,7 +19,12 @@ module.exports.data = new SlashCommandBuilder()
 module.exports.execute = async function(interaction) {
   const channel = interaction.options.getChannel("channel") ?? interaction.channel;
   // Get settings
-  const settings = getChannelSettings(channel.id);  
+  const settings = getChannelSettings(channel.id);
+  if (!settings) {
+    return interaction.reply({
+      content: `# Sticky for ${channel.url}\nNo sticky found`,
+    });
+  }
   // Done
   return interaction.reply({
     content: `# Sticky for ${channel.url}`,
