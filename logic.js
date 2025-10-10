@@ -173,7 +173,8 @@ async function getWebhook(channel) {
   const webhooks = await channel.fetchWebhooks();
   /** @type {Webhook} */
   const webhook = webhooks.get(webhookId);
-  return webhook.client;
+  settings.webhookUrl = webhook.url;
+  return new WebhookClient({ url: webhook.url });
 }
 module.exports.getWebhook = getWebhook;
 
@@ -205,7 +206,7 @@ async function getOrCreateWebhook(channel) {
   let webhook = await getWebhook(channel);
   if (!webhook) {
     const wh = await createWebhook(channel);
-    webhook = wh.client;
+    webhook = new WebhookClient({ url: wh.url });
   }
   return webhook;
 }
