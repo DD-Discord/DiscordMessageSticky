@@ -5,15 +5,22 @@ const { wrapInCode } = require("./fmt");
 /**
  * Settings for a single channel in the message sticky.
  * @typedef {Object} ChannelSettings
+ * 
  * @property {string} channelId The ID of the channel.
  * @property {string} channelName The name of the channel.
  * @property {string} webhookId The ID of the webhook. [DEPRECATED]
+ * @property {string} webhookUrl The URL of the webhook. [may be null during migration]
  * @property {string} templateId The ID of the template message (same channel).
- * @property {string | null} lastMessageId The ID of the last message (same channel).
  * @property {boolean} ignoreBots Ignore bot messages when triggering the sticky?
  * @property {boolean} silent Make sticky reposts silent?
+ * 
+ * @property {number} debounce If set debounces the repost by the given amount of MS.
+ * @property {boolean} isDebouncing Is a debounce process currently ongoing?
+ * @property {string | null} lastMessageId The ID of the last message (same channel).
+ * 
  * @property {string} content The cached sticky message content.
  * @property {APIEmbed[]} embeds The cached sticky message embeds.
+ * 
  * @property {Date?} createdAt When the record was created. Only set during the first save.
  * @property {Date?} updatedAt When the record was last saved. Set on each save.
  */

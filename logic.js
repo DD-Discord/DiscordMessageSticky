@@ -1,4 +1,4 @@
-const { Channel, Webhook, Message, MessageFlagsBitField } = require("discord.js");
+const { Channel, Webhook, Message, MessageFlagsBitField, WebhookClient } = require("discord.js");
 const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings } = require("./channel");
 const config = require("./config");
 
@@ -78,18 +78,21 @@ async function maybeRepost(channel, message) {
 /**
  * Gets the webhook for the given channel.
  * @param {Channel} channel The channel of which to get the webhook.
- * @returns {Promise<Webhook | null>} The webbhook for the given channel. Null if no webhook is found.
+ * @returns {Promise<WebhookClient | null>} The webbhook for the given channel. Null if no webhook is found.
  */
 async function getWebhook(channel) {
   const settings = getChannelSettings(channel.id);
   if (!settings) {
     return null;
   }
+  if (settings.webhookUrl) {
+    return new WebhookClient({ url: settings.webhookUrl });
+  }
   const webhookId = settings.webhookId;
   const webhooks = await channel.fetchWebhooks();
   /** @type {Webhook} */
   const webhook = webhooks.get(webhookId);
-  return webhook;
+  return webhook.client;
 }
 
 /**
@@ -114,12 +117,13 @@ async function createWebhook(channel) {
 /**
  * Gets the webhook for the given channel. If none is found: Creates a webhook and saves it in the database.
  * @param {Channel} channel The channel for which to create/get the webhook.
- * @returns {Promise<Webhook>} The webbhook for the given channel.
+ * @returns {Promise<WebhookClient>} The webbhook for the given channel.
  */
 async function getOrCreateWebhook(channel) {
   let webhook = await getWebhook(channel);
   if (!webhook) {
-    webhook = await createWebhook(channel);
+    const wh = await createWebhook(channel);
+    webhook = wh.client;
   }
   return webhook;
 }
