@@ -62,6 +62,9 @@ function startDebounceTimer(channel, settings) {
 async function onDebounceTimer(channel) {
   try {
     const settings = getChannelSettings(channel.id);
+    if (!settings) {
+      return;
+    }
     settings.isDebouncing = false;
     writeChannelSettings(settings);
     await performRepost(channel);
