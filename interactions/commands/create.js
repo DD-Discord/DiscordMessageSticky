@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, Webhook, Message, PermissionFlagsBits, ChatInputCommandInteraction } = require("discord.js");
-const { getChannelSettings, writeChannelSettings, getChannelSettingsEmbed } = require("../../channel");
+const { getChannelSettings, writeChannelSettings, getChannelSettingsEmbed, getChannelInfo } = require("../../channel");
 const { getOrCreateWebhook } = require("../../logic");
 const { wrapInCode } = require("../../fmt");
 
@@ -100,6 +100,7 @@ module.exports.execute = async function (interaction) {
     settings.debounce = debounce;
   }
   settings.guildId = message.guildId; // set guild ID since old db records dont have it
+  settings.channel = getChannelInfo(channel); // old records are missing it
   settings.content = message.content;
   settings.embeds = message.embeds.map(e => e.toJSON());
   delete settings.createdAt;

@@ -1,5 +1,5 @@
 const { Channel, Webhook, Message, MessageFlagsBitField, WebhookClient, Client, Guild } = require("discord.js");
-const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings, ChannelSettings, getAllChannelSettings } = require("./channel");
+const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings, ChannelSettings, getAllChannelSettings, webhookSendTo, webhookDeleteFrom } = require("./channel");
 const config = require("./config");
 
 /**
@@ -93,14 +93,14 @@ async function performRepost(channel) {
   // Delete old sticky
   if (settings.lastMessageId) {
     try {
-      await webhook.deleteMessage(settings.lastMessageId);
+      await webhookDeleteFrom(webhook, settings.channel, settings.lastMessageId);
     } catch (error) {
       console.error('Failed to delete old sticky', error);
     }
   }
 
   // Repost sticky
-  const res = await webhook.send({ 
+  const res = await webhookSendTo(webhook, settings.channel, { 
     content: settings.content, 
     embeds: settings.embeds,
     flags: settings.silent ? [MessageFlagsBitField.Flags.SuppressNotifications] : [],
@@ -173,6 +173,9 @@ async function getWebhook(channel) {
     return new WebhookClient({ url: settings.webhookUrl });
   }
   const webhookId = settings.webhookId;
+  if (channel.isThread()) {
+    channel = channel.parent;
+  }
   const webhooks = await channel.fetchWebhooks();
   /** @type {Webhook} */
   const webhook = webhooks.get(webhookId);
@@ -188,12 +191,15 @@ module.exports.getWebhook = getWebhook;
  */
 async function createWebhook(channel) {
   const settings = getChannelSettings(channel.id) ?? getDefaultChannelSettings(channel);
+  if (channel.isThread()) {
+    channel = channel.parent;
+  }
   /** @type {Webhook}  */
   const wh = await channel.createWebhook({
     name: config.DISCORD_WEBHOOK_NAME,
     avatar: config.DISCORD_WEBHOOK_AVATAR,
   });
-  await wh.send({ content: `Webhook <@${wh.id}> created for channel <#${channel.id}>`});
+  await webhookSendTo(wh, settings.channel, { content: `Webhook <@${wh.id}> created for channel <#${channel.id}>`});
   settings.webhookId = wh.id;
   settings.webhookUrl = wh.url;
   writeChannelSettings(settings);

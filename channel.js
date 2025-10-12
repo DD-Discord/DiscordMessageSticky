@@ -1,6 +1,15 @@
 const { dbGet, dbRegister, dbWrite, dbDelete, DbRecord, dbGetAll } = require("./db");
-const { APIEmbed, EmbedBuilder, Channel } = require("discord.js");
+const { APIEmbed, EmbedBuilder, Channel, WebhookClient, WebhookMessageCreateOptions, Webhook } = require("discord.js");
 const { wrapInCode } = require("./fmt");
+
+/**
+ * Information about a single channel
+ * @typedef {Object} ChannelInfo
+ * 
+ * @property {string} id The ID of the channel.
+ * @property {string} name The name of the channel.
+ * @property {ChannelInfo | undefined} parent The parent of the channel, if any.
+ */
 
 /**
  * Settings for a single channel in the message sticky.
@@ -9,6 +18,7 @@ const { wrapInCode } = require("./fmt");
  * @property {string} guildId The ID of the guild.
  * @property {string} channelId The ID of the channel.
  * @property {string} channelName The name of the channel.
+ * @property {ChannelInfo} channel The channel. [may be null during migration]
  * @property {string} webhookId The ID of the webhook. [DEPRECATED]
  * @property {string} webhookUrl The URL of the webhook. [may be null during migration]
  * @property {string} templateId The ID of the template message (same channel).
@@ -78,6 +88,7 @@ function getDefaultChannelSettings(channel) {
     guildId: channel.guildId,
     channelId: channel.id,
     channelName: channel.name,
+    channel: getChannelInfo(channel),
     silent: true,
     ignoreBots: true,
     debounce: 0,
@@ -116,3 +127,48 @@ function getChannelSettingsEmbed(settings) {
   return embed;
 }
 module.exports.getChannelSettingsEmbed = getChannelSettingsEmbed;
+
+/**
+ * 
+ * @param {Channel} channel
+ * @returns {ChannelInfo}
+ */
+function getChannelInfo(channel) {
+  if (channel.isThread()) {
+    return {
+      id: channel.id,
+      name: channel.name,
+      parent: getChannelInfo(channel.parent),
+    }
+  }
+  return {
+    id: channel.id,
+    name: channel.name,
+  }
+}
+module.exports.getChannelInfo = getChannelInfo;
+
+/**
+ * 
+ * @param {WebhookClient | Webhook} webhook 
+ * @param {ChannelInfo?} channel 
+ * @param {Omit<WebhookMessageCreateOptions, "threadId" | "threadName">} message 
+ */
+function webhookSendTo(webhook, channel, message) {
+  return webhook.send({
+    ...message,
+    threadId: channel?.parent ? channel.id : undefined,
+  });
+}
+module.exports.webhookSendTo = webhookSendTo;
+
+/**
+ * 
+ * @param {WebhookClient | Webhook} webhook 
+ * @param {ChannelInfo?} channel 
+ * @param {string} messageId 
+ */
+function webhookDeleteFrom(webhook, channel, messageId) {
+  return webhook.deleteMessage(messageId, channel?.parent ? channel.id : undefined);
+}
+module.exports.webhookDeleteFrom = webhookDeleteFrom;
