@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, Webhook, Message, PermissionFlagsBits, ChatInputCommandInteraction } = require("discord.js");
+const { SlashCommandBuilder, WebhookClient, Message, PermissionFlagsBits, ChatInputCommandInteraction } = require("discord.js");
 const { getChannelSettings, writeChannelSettings, getChannelSettingsEmbed, getChannelInfo } = require("../../channel");
 const { getMessageInfo, getMessage } = require("../../message");
 const { getOrCreateWebhook } = require("../../logic");
@@ -62,22 +62,25 @@ module.exports.execute = async function (interaction) {
   let message;
   try {
     message = await getMessage(interaction.guild, templateLink);
+    if (!message) {
+      throw new Error('Could not find message');
+    }
   } catch (error) {
     console.error(error);
     return interaction.reply({
-      content: `# Failed to fetch message\nCan't load message \`${templateLink}\`. Please make sure the message link is correct and the bot has access to the channel it is in. The error is:\n${wrapInCode(error)}`,
+      content: `# Failed to fetch message\nCan't load message ${templateLink}. Please make sure the message link is correct and the bot has access to the channel it is in. The error is:\n${wrapInCode(error, { forceLine: 'multi' })}`,
     });
   }
 
   // Create webhook
-  /** @type {Webhook} */
+  /** @type {WebhookClient} */
   let webhook;
   try {
     webhook = await getOrCreateWebhook(channel);
   } catch (error) {
     console.error(error);
     return interaction.reply({
-      content: `# Failed to create webhook\nThe bot is probably missing permissions. The error is:\n${wrapInCode(error)}`,
+      content: `# Failed to create webhook\nThe bot is probably missing permissions. The error is:\n${wrapInCode(error, { forceLine: 'multi' })}`,
     });
   }
 
