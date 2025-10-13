@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, Webhook, Message, PermissionFlagsBits, ChatInputCommandInteraction } = require("discord.js");
 const { getChannelSettings, writeChannelSettings, getChannelSettingsEmbed, getChannelInfo } = require("../../channel");
+const { getMessageInfo, getMessage } = require("../../message");
 const { getOrCreateWebhook } = require("../../logic");
 const { wrapInCode } = require("../../fmt");
 
@@ -15,8 +16,8 @@ module.exports.data = new SlashCommandBuilder()
     return option;
   })
   .addStringOption(option => {
-    option.setName("message-id");
-    option.setDescription("The ID of the message to create a sticky from (must be in the same channel as the sticky).");
+    option.setName("template");
+    option.setDescription("The link to the message to create a sticky from (must be in the same channel as the sticky).");
     option.setRequired(true);
     return option;
   })
@@ -48,7 +49,7 @@ module.exports.data = new SlashCommandBuilder()
  */
 module.exports.execute = async function (interaction) {
   // Get settings
-  const templateId = interaction.options.getString("message-id");
+  const templateLink = interaction.options.getString("template");
   const ignoreBots = interaction.options.getBoolean("ignore-bots");
   const override = interaction.options.getBoolean("override");
   const silent = interaction.options.getBoolean("silent");
@@ -60,11 +61,11 @@ module.exports.execute = async function (interaction) {
   /** @type {Message} */
   let message;
   try {
-    message = await channel.messages.fetch(templateId);
+    message = await getMessage(interaction.guild, templateLink);
   } catch (error) {
     console.error(error);
     return interaction.reply({
-      content: `# Failed to fetch message\nCan't load message with ID \`${templateId}\` in channel ${channel.url}. The bot is probably missing permissions, or the message you chose is in a different channel. The error is:\n${wrapInCode(error)}`,
+      content: `# Failed to fetch message\nCan't load message \`${templateLink}\`. Please make sure the message link is correct and the bot has access to the channel it is in. The error is:\n${wrapInCode(error)}`,
     });
   }
 
@@ -81,15 +82,15 @@ module.exports.execute = async function (interaction) {
   }
 
   // Check if a sticky already exists
-  const settings = getChannelSettings(channelId);
-  if (settings.templateId && !override) {
+  const settings = getChannelSettings(channelId); // channel settings record is always created by getOrCreateWebook [smell!]
+  if (settings.template && !override) {
     return interaction.reply({
       content: `# A sticky already exists\nUse the \`override\` option to replace it.`,
     });
   }
 
   // Save settings
-  settings.templateId = message.id;
+  settings.template = getMessageInfo(message);
   if (ignoreBots !== null) {
     settings.ignoreBots = ignoreBots;
   }

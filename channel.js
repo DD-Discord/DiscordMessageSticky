@@ -1,9 +1,10 @@
 const { dbGet, dbRegister, dbWrite, dbDelete, DbRecord, dbGetAll } = require("./db");
-const { APIEmbed, EmbedBuilder, Channel, WebhookClient, WebhookMessageCreateOptions, Webhook } = require("discord.js");
+const { APIEmbed, EmbedBuilder, Channel, WebhookClient, WebhookMessageCreateOptions, Webhook, Message, Guild } = require("discord.js");
 const { wrapInCode } = require("./fmt");
+const { MessageInfo } = require("./message");
 
 /**
- * Information about a single channel
+ * Information about a single channel.
  * @typedef {Object} ChannelInfo
  * 
  * @property {string} id The ID of the channel.
@@ -16,18 +17,19 @@ const { wrapInCode } = require("./fmt");
  * @typedef {Object} ChannelSettings
  * 
  * @property {string} guildId The ID of the guild.
- * @property {string} channelId The ID of the channel.
- * @property {string} channelName The name of the channel.
+ * @property {string} channelId The ID of the channel. [DEPRECATED]
+ * @property {string} channelName The name of the channel. [DEPRECATED]
  * @property {ChannelInfo} channel The channel. [may be null during migration]
  * @property {string} webhookId The ID of the webhook. [DEPRECATED]
  * @property {string} webhookUrl The URL of the webhook. [may be null during migration]
- * @property {string} templateId The ID of the template message (same channel).
+ * @property {MessageInfo} template The ID of the template message (same channel). [may be null during migration]
  * @property {boolean} ignoreBots Ignore bot messages when triggering the sticky?
  * @property {boolean} silent Make sticky reposts silent?
  * 
  * @property {number} debounce If set debounces the repost by the given amount of MS.
  * @property {boolean} isDebouncing Is a debounce process currently ongoing?
- * @property {string | null} lastMessageId The ID of the last message (same channel).
+ * @property {string | null} lastMessageId The ID of the last message (same channel). [DEPRECATED]
+ * @property {MessageInfo | null} lastMessage The the last message (same channel). [may be null during migration]
  * 
  * @property {string} content The cached sticky message content.
  * @property {APIEmbed[]} embeds The cached sticky message embeds.
@@ -94,9 +96,12 @@ function getDefaultChannelSettings(channel) {
     debounce: 0,
     isDebouncing: false,
     lastMessageId: null,
-    templateId: '',
+    lastMessage: null,
+    template: null,
     webhookId: '',
     webhookUrl: '',
+    content: '',
+    embeds: [],
   }
 }
 module.exports.getDefaultChannelSettings = getDefaultChannelSettings;
@@ -111,13 +116,14 @@ function getChannelSettingsEmbed(settings) {
     .setDescription(`> These are the settings for <#${settings.channelId}>:\n${wrapInCode({ content: settings.content, embeds: settings.embeds })}`)
     .addFields([
       { name: 'Guild ID', value: wrapInCode(settings.guildId), inline: true, },
-      { name: 'Channel ID', value: wrapInCode(settings.channelId), inline: true, },
-      { name: 'Channel Name', value: wrapInCode(settings.channelName), inline: true, },
+      { name: 'Channel ID', value: wrapInCode(settings.channel?.id), inline: true, },
+      { name: 'Channel Name', value: wrapInCode(settings.channel?.name), inline: true, },
       { name: 'Ignore bots?', value: wrapInCode(settings.ignoreBots), inline: true, },
       { name: 'Silent?', value: wrapInCode(settings.silent), inline: true, },
       { name: 'Debounce MS', value: wrapInCode(settings.debounce), inline: true, },
       { name: 'Is debouncing?', value: wrapInCode(settings.isDebouncing), inline: true, },
-      { name: 'Template ID', value: wrapInCode(settings.templateId), inline: true, },
+      { name: 'Template ID', value: wrapInCode(settings.template?.id), inline: true, },
+      { name: 'Last Message ID', value: wrapInCode(settings.lastMessage?.id), inline: true, },
       // Limit length for security
       { name: 'Webhook (ID)', value: wrapInCode(settings.webhookId, { maxLength: 60 }), inline: true, },
       { name: 'Webhook (URL)', value: wrapInCode(settings.webhookUrl, { maxLength: 60 }), inline: true, },
@@ -139,14 +145,24 @@ function getChannelInfo(channel) {
       id: channel.id,
       name: channel.name,
       parent: getChannelInfo(channel.parent),
-    }
+    };
   }
   return {
     id: channel.id,
     name: channel.name,
-  }
+  };
 }
 module.exports.getChannelInfo = getChannelInfo;
+
+/**
+ * 
+ * @param {Guild} guild 
+ * @param {ChannelInfo} channel
+ */
+function getChannel(guild, channel) {
+  return guild.channels.fetch(channel.id);
+}
+module.exports.getChannel = getChannel;
 
 /**
  * 

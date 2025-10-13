@@ -1,5 +1,5 @@
 const { Channel, Webhook, Message, MessageFlagsBitField, WebhookClient, Client, Guild } = require("discord.js");
-const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings, ChannelSettings, getAllChannelSettings, webhookSendTo, webhookDeleteFrom } = require("./channel");
+const { getChannelSettings, writeChannelSettings, getDefaultChannelSettings, ChannelSettings, getAllChannelSettings, webhookSendTo, webhookDeleteFrom, getMessageInfo } = require("./channel");
 const config = require("./config");
 
 /**
@@ -19,17 +19,17 @@ async function reviveDebouncers(guild) {
       continue;
     }
     
-    if (!setting.isDebouncing) {
+    if (!setting.isDebouncing || !setting.channel) {
       continue;
     }
 
     try {
-      const channel = await guild.channels.fetch(setting.channelId);
+      const channel = await guild.channels.fetch(setting.channel.id);
       if (channel) {
         startDebounceTimer(channel, setting);
       }
     } catch(error) {
-      console.error('Failed to revive timer for %s in %s', setting.channelId, guild.id, error);
+      console.error('Failed to revive timer for %s in %s', setting.channel.id, guild.id, error);
     }
   }
 }
@@ -106,6 +106,10 @@ async function performRepost(channel) {
     flags: settings.silent ? [MessageFlagsBitField.Flags.SuppressNotifications] : [],
   });
   settings.lastMessageId = res.id;
+  settings.lastMessage = {
+    id: res.id,
+    channel: settings.channel,
+  };
   writeChannelSettings(settings);
 }
 
