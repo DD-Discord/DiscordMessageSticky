@@ -17,7 +17,6 @@ const rest = new REST({ version: "10" }).setToken(config.DISCORD_TOKEN);
 module.exports.deployCommands = async function deployCommands({ guildId }) {
   try {
     console.log("Started refreshing commands in %s.", guildId);
-
     await rest.put(
       Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, guildId),
       {
